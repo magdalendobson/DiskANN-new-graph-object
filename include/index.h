@@ -121,7 +121,6 @@ namespace diskann {
                             const size_t max_points = 1,
                             const bool   dynamic_index = false,
                             const bool   enable_tags = false,
-                            const bool   support_eager_delete = false,
                             const bool   concurrent_consolidate = false);
 
     // Constructor for incremental index
@@ -130,7 +129,6 @@ namespace diskann {
                             const Parameters &indexParameters,
                             const Parameters &searchParameters,
                             const bool        enable_tags = false,
-                            const bool        support_eager_delete = false,
                             const bool        concurrent_consolidate = false);
 
     DISKANN_DLLEXPORT ~Index();
@@ -202,13 +200,11 @@ namespace diskann {
     DISKANN_DLLEXPORT int enable_delete();
 
     // Record deleted point now and restructure graph later. Return -1 if tag
-    // not found, 0 if OK. Do not call if _eager_delete was called earlier and
-    // data was not consolidated
+    // not found, 0 if OK. 
     DISKANN_DLLEXPORT int lazy_delete(const TagT &tag);
 
     // Record deleted points now and restructure graph later. Add to failed_tags
-    // if tag not found. Do not call if _eager_delete was called earlier and
-    // data was not consolidated.
+    // if tag not found. 
     DISKANN_DLLEXPORT void lazy_delete(const std::vector<TagT> &tags,
                                        std::vector<TagT> &      failed_tags);
 
@@ -219,11 +215,6 @@ namespace diskann {
     DISKANN_DLLEXPORT consolidation_report
                       consolidate_deletes(const Parameters &parameters);
 
-    // Delete point from graph and restructure it immediately. Do not call if
-    // _lazy_delete was called earlier and data was not consolidated
-    DISKANN_DLLEXPORT int eager_delete(const TagT        tag,
-                                       const Parameters &parameters,
-                                       int               delete_mode = 1);
 
     DISKANN_DLLEXPORT void prune_all_nbrs(const Parameters &parameters);
 
@@ -271,9 +262,6 @@ namespace diskann {
 
     // determines navigating node of the graph by calculating medoid of data
     unsigned calculate_entry_point();
-
-    // called only when _eager_delete is to be supported
-    void update_in_graph();
 
     template<typename IDType>
     std::pair<uint32_t, uint32_t> search_impl(const T *query, const size_t K,
@@ -337,10 +325,9 @@ namespace diskann {
 
     // add reverse links from all the visited nodes to node n.
     void inter_insert(unsigned n, std::vector<unsigned> &pruned_list,
-                      const _u32 range, bool update_in_graph);
+                      const _u32 range);
 
-    void inter_insert(unsigned n, std::vector<unsigned> &pruned_list,
-                      bool update_in_graph);
+    void inter_insert(unsigned n, std::vector<unsigned> &pruned_list);
 
     void link(Parameters &parameters);
 
@@ -401,7 +388,6 @@ namespace diskann {
 
     // Graph related data structures
     std::vector<std::vector<unsigned>> _final_graph;
-    std::vector<std::vector<unsigned>> _in_graph;
 
     // Dimensions
     size_t _dim = 0;
@@ -441,10 +427,6 @@ namespace diskann {
     tsl::robin_set<unsigned>     _delete_set;
     natural_number_set<unsigned> _empty_slots;
 
-    bool _support_eager_delete =
-        false;  // Enables in-graph, requires more space
-
-    bool _eager_done = false;     // true if eager deletions have been made
     bool _lazy_done = false;      // true if lazy deletions have been made
     bool _data_compacted = true;  // true if data has been compacted
     bool _is_saved = false;  // Gopal. Checking if the index is already saved.
